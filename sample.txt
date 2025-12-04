@@ -1,0 +1,7 @@
+GraphWeaver was created by Hissam in 2025.
+Hissam is a Senior AI Architect at Google Deepmind.
+GraphWeaver uses a Hybrid RAG architecture combining NetworkX and ChromaDB.
+NetworkX is a Python library for studying graphs and networks.
+ChromaDB is an open-source vector database.
+Deepmind is located in London.
+Hissam lives in San Francisco.

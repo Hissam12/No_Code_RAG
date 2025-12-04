@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+networkx
+chromadb
+litellm
+pydantic
+python-dotenv
+tiktoken
+# For PDF parsing
+pypdf
