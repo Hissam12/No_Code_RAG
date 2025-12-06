@@ -1,63 +1,37 @@
 import networkx as nx
-import json
-from typing import List, Dict, Any, Tuple
-from litellm import completion
+from typing import Dict, Any
 from app.core.vector_store import VectorStore
-from app.models.schemas import Node, Edge, GraphData
+from app.core.llm_service import LLMService
 
 class GraphBuilder:
     def __init__(self):
         self.graph = nx.DiGraph()
         self.vector_store = VectorStore()
-        self.model = "gpt-4o-mini" # Or "llama-3-8b" via LiteLLM config
+        self.llm_service = LLMService()
 
     def extract_graph_from_text(self, text: str):
         """
-        Extracts Nodes and Edges from text using an LLM and updates the graph.
+        Extracts Nodes and Edges from text using LLMService and updates the graph.
         """
-        prompt = f"""
-        Analyze the following text and extract a Knowledge Graph.
-        Return ONLY a JSON object with this exact structure:
-        {{
-            "nodes": [{{"id": "EntityName", "type": "Person/Company/Location/Date/Concept"}}],
-            "edges": [{{"source": "EntityA", "target": "EntityB", "relationship": "FOUNDED/SIGNED/LOCATED_IN/etc"}}]
-        }}
-        
-        Text:
-        {text}
-        """
+        nodes, edges = self.llm_service.extract_graph_data(text)
 
-        try:
-            response = completion(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"}
+        # Update NetworkX and Vector Store
+        for node in nodes:
+            self.graph.add_node(node.id, type=node.type, label=node.label)
+            
+            # Add to Vector Store
+            self.vector_store.add_documents(
+                documents=[f"{node.id} ({node.type})"],
+                metadatas=[{"type": node.type, "id": node.id}],
+                ids=[node.id]
             )
-            content = response.choices[0].message.content
-            data = json.loads(content)
 
-            # Update NetworkX and Vector Store
-            for n in data.get("nodes", []):
-                node_id = n["id"]
-                node_type = n.get("type", "Entity")
-                self.graph.add_node(node_id, type=node_type, label=node_id)
-                
-                # Add to Vector Store
-                self.vector_store.add_documents(
-                    documents=[f"{node_id} ({node_type})"],
-                    metadatas=[{"type": node_type}],
-                    ids=[node_id]
-                )
-
-            for e in data.get("edges", []):
-                self.graph.add_edge(e["source"], e["target"], relation=e["relationship"])
-
-        except Exception as e:
-            print(f"Error extracting graph: {e}")
+        for edge in edges:
+            self.graph.add_edge(edge.source, edge.target, relation=edge.relation)
 
     def visualize_graph(self) -> Dict[str, Any]:
         """
-        Returns graph data in a format compatible with frontend visualizers (e.g., React Flow).
+        Returns graph data in a format compatible with frontend visualizers.
         """
         nodes = []
         for n, attrs in self.graph.nodes(data=True):
@@ -85,7 +59,6 @@ class GraphBuilder:
         3. Answer ONLY using context.
         """
         # 1. Find relevant nodes via Vector Search
-        # (Simple approach: search the whole question against node index)
         relevant_node_ids = self.vector_store.query_similar(question, n_results=3)
         
         if not relevant_node_ids:
@@ -106,21 +79,5 @@ class GraphBuilder:
         if not context:
              return "I found relevant entities but no relationships in the graph."
 
-        # 3. LLM Answer with Constraints
-        prompt = f"""
-        You are a helpful assistant answering questions based on a Knowledge Graph.
-        
-        Context (Graph Relationships):
-        {context}
-        
-        Question: {question}
-        
-        Constraint: Answer ONLY using the provided graph context. If the relationship is not found, say "I don't know".
-        Do not use outside knowledge.
-        """
-        
-        response = completion(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
+        # 3. LLM Answer via Service
+        return self.llm_service.generate_answer(question, context)

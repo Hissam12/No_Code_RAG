@@ -2,10 +2,14 @@ fastapi
 uvicorn
 python-multipart
 networkx
-chromadb
-litellm
 pydantic
 python-dotenv
 tiktoken
-# For PDF parsing
+# LangChain & AI
+langchain
+langchain-openai
+langchain-community
+langchain-pinecone
+pinecone-client
+# PDF parsing
 pypdf

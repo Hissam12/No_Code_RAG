@@ -1,27 +1,35 @@
 import io
 from typing import List
 from fastapi import UploadFile
-from pypdf import PdfReader
+import os
+import shutil
+from langchain_community.document_loaders import PyPDFLoader
 
 class IngestionService:
-    @staticmethod
-    async def process_file(file: UploadFile) -> str:
-        """Extracts text from an uploaded file (PDF or TXT)."""
-        content = await file.read()
-        
-        if file.filename.endswith(".pdf"):
-            return IngestionService._parse_pdf(content)
-        else:
-            # Assume text
-            return content.decode("utf-8")
+    def __init__(self, upload_dir: str = "pdfs"):
+        self.upload_dir = upload_dir
+        os.makedirs(self.upload_dir, exist_ok=True)
 
-    @staticmethod
-    def _parse_pdf(content: bytes) -> str:
-        reader = PdfReader(io.BytesIO(content))
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
-        return text
+    async def process_file(self, file: UploadFile) -> str:
+        """
+        Saves the uploaded file and extracts text.
+        Supports .txt and .pdf
+        """
+        file_path = os.path.join(self.upload_dir, file.filename)
+        
+        # Save file to disk
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Extract text based on extension
+        if file.filename.endswith(".pdf"):
+            loader = PyPDFLoader(file_path)
+            pages = loader.load()
+            return "\n".join([p.page_content for p in pages])
+        else:
+            # Assume text file
+            with open(file_path, "r") as f:
+                return f.read()
 
     @staticmethod
     def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
