@@ -5,6 +5,7 @@ backend/.env
 backend/.env.*
 *.pem
 *.key
+*.pdf
 
 # Python
 __pycache__/
@@ -24,6 +25,7 @@ coverage/
 
 # Local DBs
 chroma_db/
+backend/data/
 *.db
 *.sqlite3
 

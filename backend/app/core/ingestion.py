@@ -6,7 +6,10 @@ import shutil
 from langchain_community.document_loaders import PyPDFLoader
 
 class IngestionService:
-    def __init__(self, upload_dir: str = "pdfs"):
+    def __init__(self, upload_dir: str = None):
+        # Default to data/pdfs in the backend directory
+        if upload_dir is None:
+            upload_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "pdfs")
         self.upload_dir = upload_dir
         os.makedirs(self.upload_dir, exist_ok=True)
 

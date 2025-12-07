@@ -8,8 +8,10 @@ tiktoken
 # LangChain & AI
 langchain
 langchain-openai
+langchain-ollama
 langchain-community
 langchain-pinecone
 pinecone-client
+chromadb
 # PDF parsing
 pypdf
